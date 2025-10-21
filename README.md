@@ -1,6 +1,15 @@
 # Xinsd 苍蝇饭馆 - 智能菜谱生成应用
 
+[![GitHub stars](https://img.shields.io/github/stars/duxs-code/xinsd-diner?style=flat-square)](https://github.com/duxs-code/xinsd-diner/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/duxs-code/xinsd-diner?style=flat-square)](https://github.com/duxs-code/xinsd-diner/network)
+[![GitHub issues](https://img.shields.io/github/issues/duxs-code/xinsd-diner?style=flat-square)](https://github.com/duxs-code/xinsd-diner/issues)
+[![License](https://img.shields.io/github/license/duxs-code/xinsd-diner?style=flat-square)](https://github.com/duxs-code/xinsd-diner/blob/main/LICENSE)
+[![Next.js](https://img.shields.io/badge/Next.js-15-black?style=flat-square&logo=next.js)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
+
 一个基于 Next.js 和 SQLite 的现代化食材管理和智能菜谱生成应用。用户可以浏览食材、添加到菜篮子，然后基于选择的食材和个人要求生成个性化菜谱，并配有 AI 生成的精美菜品图片。
+
+> 🚀 **最新更新**: 项目已开源并托管在GitHub，欢迎Star和Fork！
 
 ## ✨ 核心功能
 
@@ -10,6 +19,14 @@
 - 🖼️ **AI 配图功能** - 自动为菜品生成精美图片，提升视觉体验
 - 📱 **响应式设计** - 完美适配移动端、平板和桌面端
 - 🧹 **智能图片管理** - 自动清理无用图片，优化存储空间
+
+## 🌟 项目特色
+
+- **🤖 双AI驱动**: 结合Google Gemini和阿里云千问AI，提供文本生成和图像生成的完整解决方案
+- **🎨 现代化UI**: 基于shadcn/ui组件库，提供优雅的用户界面和流畅的交互体验
+- **⚡ 高性能**: SQLite数据库 + Next.js 15，确保快速响应和优秀的用户体验
+- **🔧 开发友好**: 完整的TypeScript支持，严格的代码规范，丰富的开发工具
+- **📦 一键部署**: 支持Vercel等平台的零配置部署
 
 ## 🛠️ 技术栈
 
