@@ -47,11 +47,13 @@ next-env.d.ts
 /public/uploads/items/*
 /public/uploads/categories/*
 
-# IDE
+# IDE and Development Tools
 .vscode/
 .idea/
 *.swp
 *.swo
+.kiro/
+.gemini/
 
 # OS
 .DS_Store
