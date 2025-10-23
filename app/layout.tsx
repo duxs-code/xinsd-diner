@@ -4,8 +4,10 @@ import { GeistSans } from "geist/font/sans"
 import { GeistMono } from "geist/font/mono"
 import { Analytics } from "@vercel/analytics/next"
 import { Suspense } from "react"
+import { AuthProvider } from "@/contexts/auth-context"
 import { MenuProvider } from "@/contexts/menu-context"
 import { CartProvider } from "@/contexts/cart-context"
+import { SessionMonitor } from "@/components/session-monitor"
 import { Toaster } from "@/components/ui/toaster"
 import "./globals.css"
 
@@ -23,12 +25,16 @@ export default function RootLayout({
   return (
     <html lang="zh-CN">
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable} antialiased`}>
-        <MenuProvider>
-          <CartProvider>
-            <Suspense fallback={<div>Loading...</div>}>{children}</Suspense>
-            <Toaster />
-          </CartProvider>
-        </MenuProvider>
+        <AuthProvider>
+          <MenuProvider>
+            <CartProvider>
+              <SessionMonitor>
+                <Suspense fallback={<div>Loading...</div>}>{children}</Suspense>
+                <Toaster />
+              </SessionMonitor>
+            </CartProvider>
+          </MenuProvider>
+        </AuthProvider>
         <Analytics />
       </body>
     </html>

@@ -85,6 +85,33 @@ db.exec(`
   )
 `)
 
+// 创建用户表
+db.exec(`
+  CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT UNIQUE NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    name TEXT NOT NULL,
+    role TEXT DEFAULT 'user' CHECK (role IN ('user', 'admin')),
+    is_active INTEGER DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    last_login_at DATETIME
+  )
+`)
+
+// 创建用户会话表
+db.exec(`
+  CREATE TABLE IF NOT EXISTS user_sessions (
+    id TEXT PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    expires_at DATETIME NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+  )
+`)
+
 // 创建索引
 db.exec(`
   CREATE INDEX IF NOT EXISTS idx_menu_items_category ON menu_items(category_id);
@@ -95,6 +122,12 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_images_recipe_id ON images(recipe_id);
   CREATE INDEX IF NOT EXISTS idx_images_used ON images(used);
   CREATE INDEX IF NOT EXISTS idx_images_created_at ON images(created_at);
+  CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+  CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+  CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+  CREATE INDEX IF NOT EXISTS idx_users_is_active ON users(is_active);
+  CREATE INDEX IF NOT EXISTS idx_user_sessions_user_id ON user_sessions(user_id);
+  CREATE INDEX IF NOT EXISTS idx_user_sessions_expires_at ON user_sessions(expires_at);
 `)
 
 console.log('✅ 数据库表结构初始化完成')
@@ -116,12 +149,12 @@ const insertCategory = db.prepare(`
 `)
 
 const categories = [
-  { code: 'vegetables', name: '蔬菜', image: '/vegetables.jpg', sort_order: 1 },
-  { code: 'meat', name: '肉类', image: '/meat.jpg', sort_order: 2 },
-  { code: 'seafood', name: '海鲜', image: '/seafood.jpg', sort_order: 3 },
-  { code: 'fruits', name: '水果', image: '/fruits.jpg', sort_order: 4 },
-  { code: 'dairy', name: '乳制品', image: '/dairy.jpg', sort_order: 5 },
-  { code: 'grains', name: '谷物', image: '/grains.jpg', sort_order: 6 }
+  { code: 'vegetables', name: '蔬菜', image: '', sort_order: 1 },
+  { code: 'meat', name: '肉类', image: '', sort_order: 2 },
+  { code: 'seafood', name: '海鲜', image: '', sort_order: 3 },
+  { code: 'fruits', name: '水果', image: '', sort_order: 4 },
+  { code: 'dairy', name: '乳制品', image: '', sort_order: 5 },
+  { code: 'grains', name: '谷物', image: '', sort_order: 6 }
 ]
 
 const categoryTransaction = db.transaction((categories) => {
@@ -145,30 +178,30 @@ const insertItem = db.prepare(`
 
 const items = [
   // 蔬菜
-  { name: '生菜', description: '新鲜脆嫩的生菜', category: 'vegetables', image: '/vegetables/lettuce.jpg', sort_order: 1 },
-  { name: '西红柿', description: '红润饱满的西红柿', category: 'vegetables', image: '/vegetables/tomato.jpg', sort_order: 2 },
-  { name: '黄瓜', description: '清脆爽口的黄瓜', category: 'vegetables', image: '/vegetables/cucumber.jpg', sort_order: 3 },
-  { name: '胡萝卜', description: '营养丰富的胡萝卜', category: 'vegetables', image: '/vegetables/carrot.jpg', sort_order: 4 },
-  { name: '白菜', description: '鲜嫩的大白菜', category: 'vegetables', image: '/vegetables/cabbage.jpg', sort_order: 5 },
-  { name: '菠菜', description: '绿叶营养的菠菜', category: 'vegetables', image: '/vegetables/spinach.jpg', sort_order: 6 },
+  { name: '生菜', description: '新鲜脆嫩的生菜', category: 'vegetables', image: '', sort_order: 1 },
+  { name: '西红柿', description: '红润饱满的西红柿', category: 'vegetables', image: '', sort_order: 2 },
+  { name: '黄瓜', description: '清脆爽口的黄瓜', category: 'vegetables', image: '', sort_order: 3 },
+  { name: '胡萝卜', description: '营养丰富的胡萝卜', category: 'vegetables', image: '', sort_order: 4 },
+  { name: '白菜', description: '鲜嫩的大白菜', category: 'vegetables', image: '', sort_order: 5 },
+  { name: '菠菜', description: '绿叶营养的菠菜', category: 'vegetables', image: '', sort_order: 6 },
   
   // 肉类
-  { name: '猪肉', description: '新鲜的猪肉', category: 'meat', image: '/meat/pork.jpg', sort_order: 1 },
-  { name: '牛肉', description: '优质的牛肉', category: 'meat', image: '/meat/beef.jpg', sort_order: 2 },
-  { name: '鸡肉', description: '嫩滑的鸡肉', category: 'meat', image: '/meat/chicken.jpg', sort_order: 3 },
-  { name: '羊肉', description: '鲜美的羊肉', category: 'meat', image: '/meat/lamb.jpg', sort_order: 4 },
+  { name: '猪肉', description: '新鲜的猪肉', category: 'meat', image: '', sort_order: 1 },
+  { name: '牛肉', description: '优质的牛肉', category: 'meat', image: '', sort_order: 2 },
+  { name: '鸡肉', description: '嫩滑的鸡肉', category: 'meat', image: '', sort_order: 3 },
+  { name: '羊肉', description: '鲜美的羊肉', category: 'meat', image: '', sort_order: 4 },
   
   // 海鲜
-  { name: '鲈鱼', description: '新鲜的鲈鱼', category: 'seafood', image: '/seafood/bass.jpg', sort_order: 1 },
-  { name: '虾', description: '活蹦乱跳的虾', category: 'seafood', image: '/seafood/shrimp.jpg', sort_order: 2 },
-  { name: '螃蟹', description: '肥美的螃蟹', category: 'seafood', image: '/seafood/crab.jpg', sort_order: 3 },
-  { name: '带鱼', description: '新鲜的带鱼', category: 'seafood', image: '/seafood/hairtail.jpg', sort_order: 4 },
+  { name: '鲈鱼', description: '新鲜的鲈鱼', category: 'seafood', image: '', sort_order: 1 },
+  { name: '虾', description: '活蹦乱跳的虾', category: 'seafood', image: '', sort_order: 2 },
+  { name: '螃蟹', description: '肥美的螃蟹', category: 'seafood', image: '', sort_order: 3 },
+  { name: '带鱼', description: '新鲜的带鱼', category: 'seafood', image: '', sort_order: 4 },
   
   // 水果
-  { name: '苹果', description: '脆甜的苹果', category: 'fruits', image: '/fruits/apple.jpg', sort_order: 1 },
-  { name: '香蕉', description: '香甜的香蕉', category: 'fruits', image: '/fruits/banana.jpg', sort_order: 2 },
-  { name: '橙子', description: '酸甜的橙子', category: 'fruits', image: '/fruits/orange.jpg', sort_order: 3 },
-  { name: '葡萄', description: '晶莹的葡萄', category: 'fruits', image: '/fruits/grape.jpg', sort_order: 4 }
+  { name: '苹果', description: '脆甜的苹果', category: 'fruits', image: '', sort_order: 1 },
+  { name: '香蕉', description: '香甜的香蕉', category: 'fruits', image: '', sort_order: 2 },
+  { name: '橙子', description: '酸甜的橙子', category: 'fruits', image: '', sort_order: 3 },
+  { name: '葡萄', description: '晶莹的葡萄', category: 'fruits', image: '', sort_order: 4 }
 ]
 
 const itemTransaction = db.transaction((items) => {
@@ -182,7 +215,20 @@ const itemTransaction = db.transaction((items) => {
 
 itemTransaction(items)
 
+// 创建默认管理员用户
+const bcrypt = require('bcryptjs')
+const saltRounds = 12
+const adminPasswordHash = bcrypt.hashSync('admin', saltRounds)
+
+const insertUser = db.prepare(`
+  INSERT INTO users (username, email, password_hash, name, role) 
+  VALUES (?, ?, ?, ?, ?)
+`)
+
+insertUser.run('admin', 'admin@xinsd.com', adminPasswordHash, '系统管理员', 'admin')
+
 console.log('✅ 默认数据初始化完成')
+console.log('👤 默认管理员账号: admin / admin')
 
 // 显示统计信息
 const finalCategoryCount = db.prepare('SELECT COUNT(*) as count FROM categories').get()

@@ -3,6 +3,8 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useCart } from "@/contexts/cart-context"
+import { ProtectedRoute } from "@/components/auth/protected-route"
+import { Navigation } from "@/components/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
@@ -13,13 +15,13 @@ import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
 
 import { ArrowLeft, Sparkles, Loader2, RefreshCw, Share2, ImageIcon, ChefHat } from "lucide-react"
-import Image from "next/image"
+import { OptimizedImage } from "@/components/optimized-image"
 import ReactMarkdown from "react-markdown"
 import { apiClient, ApiError } from "@/lib/api-client"
 import { useToast } from "@/hooks/use-toast"
 import "./recipe-styles.css"
 
-export default function CheckoutPage() {
+function CheckoutPageContent() {
   const router = useRouter()
   const { cart } = useCart()
   const { toast } = useToast()
@@ -199,16 +201,15 @@ export default function CheckoutPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-30 bg-card border-b shadow-sm">
-        <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => router.push("/")} className="rounded-full">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <h1 className="text-xl sm:text-2xl font-bold">菜谱生成</h1>
-          </div>
-        </div>
-      </header>
+      <Navigation title="菜谱生成" />
+      
+      {/* 返回按钮 */}
+      <div className="container mx-auto px-3 sm:px-4 py-2">
+        <Button variant="ghost" onClick={() => router.push("/")} className="gap-2 -ml-2">
+          <ArrowLeft className="h-4 w-4" />
+          返回食材选择
+        </Button>
+      </div>
 
       <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 md:py-8">
         <div className="grid lg:grid-cols-2 gap-4 sm:gap-6 md:gap-8">
@@ -220,7 +221,14 @@ export default function CheckoutPage() {
                 {cart.map((item) => (
                   <div key={item.id} className="flex gap-3 items-center">
                     <div className="relative h-12 w-12 sm:h-14 sm:w-14 rounded-md overflow-hidden bg-secondary flex-shrink-0">
-                      <Image src={item.image || "/placeholder.svg"} alt={item.name} fill className="object-cover" />
+                      <OptimizedImage 
+                        src={item.image} 
+                        alt={item.name} 
+                        fill 
+                        aspectRatio="square"
+                        imageType="item"
+                        className="object-cover" 
+                      />
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-sm sm:text-base truncate">{item.name}</h3>
@@ -595,5 +603,13 @@ export default function CheckoutPage() {
         </div>
       </main>
     </div>
+  )
+}
+
+export default function CheckoutPage() {
+  return (
+    <ProtectedRoute>
+      <CheckoutPageContent />
+    </ProtectedRoute>
   )
 }

@@ -2,9 +2,15 @@ import { NextRequest } from 'next/server'
 import { queries } from '@/lib/database-sqlite'
 import { withDatabaseConnection, parseRequestBody } from '@/lib/api-utils-sqlite'
 import { createSuccessResponse, createErrorResponse, validateRequired } from '@/lib/api-types'
+import { requireAuth, createUnauthorizedResponse } from '@/lib/auth'
 
 // POST /api/v1/menu/update-item - 更新商品
 export async function POST(request: NextRequest) {
+  // 验证用户认证
+  const user = await requireAuth(request)
+  if (!user) {
+    return createUnauthorizedResponse('请先登录')
+  }
   return withDatabaseConnection(async () => {
     const body = await parseRequestBody(request)
     const { id, name, description, category, image } = body

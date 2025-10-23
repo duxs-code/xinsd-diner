@@ -287,7 +287,7 @@ export function EditItemDialog({ open, onOpenChange, item }: EditItemDialogProps
             {imagePreview && (
               <div className="mt-2 relative w-full rounded-lg overflow-hidden border">
                 <div className="aspect-[4/3] w-full">
-                  <img src={imagePreview || "/placeholder.svg"} alt="预览" className="w-full h-full object-cover" />
+                  <img src={imagePreview || "/placeholder.svg"} alt="商品预览" className="w-full h-full object-cover" />
                 </div>
                 <div className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
                   4:3 比例

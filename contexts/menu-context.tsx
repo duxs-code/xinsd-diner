@@ -5,6 +5,7 @@ import { createContext, useContext, useState, useCallback, useEffect } from "rea
 import type { MenuItem, Category, AddMenuItemRequest, AddCategoryRequest } from "@/lib/types"
 import { apiClient, ApiError } from "@/lib/api-client"
 import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/contexts/auth-context"
 import { menuItems as staticMenuItems, categories as staticCategories } from "@/lib/menu-data"
 
 interface MenuContextType {
@@ -47,6 +48,7 @@ export function MenuProvider({ children }: { children: React.ReactNode }) {
   const [currentCategoryId, setCurrentCategoryId] = useState<string | null>(null)
   const [currentSearchQuery, setCurrentSearchQuery] = useState<string | null>(null)
   const { toast } = useToast()
+  const { isAuthenticated, loading: authLoading } = useAuth()
 
   // 加载分类数据
   const refreshCategories = useCallback(async () => {
@@ -91,8 +93,35 @@ export function MenuProvider({ children }: { children: React.ReactNode }) {
     }
   }, [loadMenuItems, pagination, currentCategoryId, currentSearchQuery])
 
-  // 初始化数据加载
+  // 初始化数据加载（只在用户已登录时执行）
   useEffect(() => {
+    // 等待认证状态确定
+    if (authLoading) {
+      return
+    }
+    
+    // 如果用户未登录，使用静态数据
+    if (!isAuthenticated) {
+      setUseStaticData(true)
+      setCategories(staticCategories)
+      // 转换静态数据的ID格式
+      const convertedItems = staticMenuItems.map(item => ({
+        ...item,
+        id: parseInt(String(item.id).replace(/\D/g, '')) || Math.floor(Math.random() * 1000)
+      }))
+      setMenuItems(convertedItems)
+      setPagination({
+        page: 1,
+        limit: 20,
+        total: convertedItems.length,
+        total_pages: Math.ceil(convertedItems.length / 20)
+      })
+      setError(null)
+      setLoading(false)
+      return
+    }
+    
+    // 用户已登录，尝试加载真实数据
     const loadInitialData = async () => {
       setLoading(true)
       setError(null)
@@ -104,6 +133,19 @@ export function MenuProvider({ children }: { children: React.ReactNode }) {
         setUseStaticData(false)
       } catch (error) {
         console.error('Failed to load initial data, falling back to static data:', error)
+        
+        // 检查是否是认证错误（401）
+        const isAuthError = error instanceof ApiError && error.status === 401
+        
+        if (!isAuthError) {
+          // 只有在非认证错误时才显示数据库连接失败的消息
+          toast({
+            title: "数据库连接失败",
+            description: "已切换到演示模式，数据不会保存",
+            variant: "destructive",
+          })
+        }
+        
         // 回退到静态数据
         setUseStaticData(true)
         setCategories(staticCategories)
@@ -120,19 +162,13 @@ export function MenuProvider({ children }: { children: React.ReactNode }) {
           total_pages: Math.ceil(convertedItems.length / 20)
         })
         setError(null)
-        
-        toast({
-          title: "数据库连接失败",
-          description: "已切换到演示模式，数据不会保存",
-          variant: "destructive",
-        })
       } finally {
         setLoading(false)
       }
     }
 
     loadInitialData()
-  }, [])
+  }, [isAuthenticated, authLoading])
 
   // 添加商品
   const addMenuItem = useCallback(

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSuccessResponse, createErrorResponse } from '@/lib/api-types'
 import { imageManager } from '@/lib/image-manager'
+import { requireAuth, createUnauthorizedResponse } from '@/lib/auth'
 
 // AI生图请求接口
 interface GenerateImageRequest {
@@ -38,6 +39,11 @@ interface QwenResponse {
 
 // POST /api/v1/ai/generate-image - AI生成图片
 export async function POST(request: NextRequest) {
+  // 验证用户认证
+  const user = await requireAuth(request)
+  if (!user) {
+    return createUnauthorizedResponse('请先登录')
+  }
   try {
     const body: GenerateImageRequest = await request.json()
     const { itemName, category } = body

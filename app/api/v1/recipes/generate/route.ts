@@ -3,6 +3,7 @@ import { withDatabaseConnection, parseRequestBody } from '@/lib/api-utils-sqlite
 import { createSuccessResponse, createErrorResponse } from '@/lib/api-types'
 import { queries } from '@/lib/database-sqlite'
 import { imageManager } from '@/lib/image-manager'
+import { requireAuth, createUnauthorizedResponse } from '@/lib/auth'
 
 // 谷歌Gemini API响应接口
 interface GeminiResponse {
@@ -29,14 +30,19 @@ interface GeminiResponse {
 function extractDishNames(recipeContent: string): string[] {
   const dishNames: string[] = []
   
+  console.log('开始提取菜品名称，菜谱内容预览:', recipeContent.substring(0, 500))
+  
   // 匹配Markdown标题格式的菜品名称
   const titleMatches = recipeContent.match(/^#{2,3}\s*(.+?)$/gm)
   if (titleMatches) {
+    console.log('找到的标题:', titleMatches)
     titleMatches.forEach(match => {
       let cleanName = match
         .replace(/^#{2,3}\s*/, '') // 移除 ## 或 ###
         .replace(/^\d+\.?\s*/, '') // 移除数字编号
         .trim()
+      
+      console.log('处理标题:', match, '-> 清理后:', cleanName)
       
       // 先应用模式匹配，提取真正的菜品名称
       const patterns = [
@@ -45,12 +51,15 @@ function extractDishNames(recipeContent: string): string[] {
         /^主菜[一二三四五六七八九十]*[、：:]\s*(.+)/, // 匹配 "主菜一：菜品名称"
         /^汤品[、：:]\s*(.+)/, // 匹配 "汤品：菜品名称"
         /^(.+?)[（(].*[）)]$/, // 提取括号前的内容
+        /^菜品名称[：:]?\s*(.+)/, // 匹配 "菜品名称：西红柿炒鸡蛋"
+        /^菜名[：:]?\s*(.+)/, // 匹配 "菜名：西红柿炒鸡蛋"
       ]
       
       for (const pattern of patterns) {
         const patternMatch = cleanName.match(pattern)
         if (patternMatch) {
           cleanName = patternMatch[1].trim()
+          console.log('模式匹配成功:', pattern, '-> 结果:', cleanName)
           break
         }
       }
@@ -63,16 +72,18 @@ function extractDishNames(recipeContent: string): string[] {
       
       // 过滤掉非菜品名称的标题
       const excludePatterns = [
-        /^(菜单|菜谱|做法|步骤|材料|食材|准备|说明|注意|提示|概览|总览|介绍|制作|烹饪|方法|特点|营养|功效|适宜|禁忌|小贴士|温馨提示).*$/,
+        /^(菜单|菜谱|做法|步骤|材料|食材|准备|说明|注意|提示|概览|总览|介绍|制作|烹饪|方法|特点|营养|功效|适宜|禁忌|小贴士|温馨提示|所需食材|制作步骤|烹饪技巧).*$/,
         /^[a-zA-Z\s]+$/, // 纯英文
         /^[\d\s]+$/, // 纯数字
         /^.{1,2}$/, // 太短的名称
-        /^.{15,}$/, // 太长的名称
+        /^.{20,}$/, // 太长的名称
       ]
       
       const isValidDishName = !excludePatterns.some(pattern => pattern.test(cleanName))
       
-      if (cleanName && isValidDishName && cleanName.length >= 3 && cleanName.length <= 15) {
+      console.log('菜品名称验证:', cleanName, '是否有效:', isValidDishName)
+      
+      if (cleanName && isValidDishName && cleanName.length >= 3 && cleanName.length <= 20) {
         dishNames.push(cleanName)
       }
     })
@@ -80,15 +91,28 @@ function extractDishNames(recipeContent: string): string[] {
   
   // 如果没有找到标题格式，尝试匹配其他格式
   if (dishNames.length === 0) {
+    console.log('未找到标题格式，尝试匹配粗体文本')
     const boldMatches = recipeContent.match(/\*\*([^*]+)\*\*/g)
     if (boldMatches) {
+      console.log('找到的粗体文本:', boldMatches)
       boldMatches.forEach(match => {
         const cleanName = match
           .replace(/\*\*/g, '')
           .replace(/^\d+\.?\s*/, '')
           .trim()
         
-        if (cleanName && cleanName.length >= 3 && cleanName.length <= 15) {
+        // 应用相同的过滤逻辑
+        const excludePatterns = [
+          /^(菜单|菜谱|做法|步骤|材料|食材|准备|说明|注意|提示|概览|总览|介绍|制作|烹饪|方法|特点|营养|功效|适宜|禁忌|小贴士|温馨提示|所需食材|制作步骤|烹饪技巧).*$/,
+          /^[a-zA-Z\s]+$/,
+          /^[\d\s]+$/,
+          /^.{1,2}$/,
+          /^.{20,}$/,
+        ]
+        
+        const isValidDishName = !excludePatterns.some(pattern => pattern.test(cleanName))
+        
+        if (cleanName && isValidDishName && cleanName.length >= 3 && cleanName.length <= 20) {
           dishNames.push(cleanName)
         }
       })
@@ -103,7 +127,7 @@ function extractDishNames(recipeContent: string): string[] {
 }
 
 // 为所有菜品生成图片
-async function generateDishImages(dishNames: string[], baseUrl: string): Promise<{ [key: string]: string }> {
+async function generateDishImages(dishNames: string[], baseUrl: string, cookieHeader?: string): Promise<{ [key: string]: string }> {
   const dishImages: { [key: string]: string } = {}
   
   // 为所有菜品生成图片，但限制数量避免API调用过多
@@ -122,7 +146,8 @@ async function generateDishImages(dishNames: string[], baseUrl: string): Promise
         const response = await fetch(`${baseUrl}/api/v1/ai/generate-image`, {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            ...(cookieHeader && { 'Cookie': cookieHeader })
           },
           body: JSON.stringify({
             itemName: dishName,
@@ -357,6 +382,11 @@ async function generateRecipeWithGemini(cart_items: any[], requirements: any): P
 
 // POST /api/v1/recipes/generate - 生成菜谱
 export async function POST(request: NextRequest) {
+  // 验证用户认证
+  const user = await requireAuth(request)
+  if (!user) {
+    return createUnauthorizedResponse('请先登录')
+  }
   return withDatabaseConnection(async () => {
     const body = await parseRequestBody(request)
     const { cart_items, requirements, generate_images = true } = body
@@ -387,11 +417,12 @@ export async function POST(request: NextRequest) {
           const dishNames = extractDishNames(recipe_content)
           
           if (dishNames.length > 0) {
-            // 获取基础URL
+            // 获取基础URL和认证信息
             const baseUrl = `${request.nextUrl.protocol}//${request.nextUrl.host}`
+            const cookieHeader = request.headers.get('cookie')
             
             // 为菜品生成图片
-            dish_images = await generateDishImages(dishNames, baseUrl)
+            dish_images = await generateDishImages(dishNames, baseUrl, cookieHeader || undefined)
             
             // 将图片插入到菜谱中
             if (Object.keys(dish_images).length > 0) {

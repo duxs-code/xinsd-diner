@@ -7,6 +7,8 @@ import { AddItemDialog } from "@/components/add-item-dialog"
 import { AddCategoryDialog } from "@/components/add-category-dialog"
 import { EditCategoryDialog } from "@/components/edit-category-dialog"
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog"
+import { ProtectedRoute } from "@/components/auth/protected-route"
+import { Navigation } from "@/components/navigation"
 import { useMenu } from "@/contexts/menu-context"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -16,7 +18,7 @@ import { PaginationSettings } from "@/components/pagination-settings"
 
 const DEFAULT_ITEMS_PER_PAGE = 20
 
-export default function Home() {
+function HomePage() {
   const { menuItems, categories, deleteMenuItems, deleteCategory, loading, error, pagination, loadMenuItems } = useMenu()
   const [selectedCategory, setSelectedCategory] = useState<string>("")
   const [searchQuery, setSearchQuery] = useState("")
@@ -150,11 +152,16 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* 头部 */}
-      <header className="sticky top-0 z-30 bg-card border-b shadow-sm">
+      {/* 导航栏 */}
+      <Navigation />
+      
+      {/* 操作栏和分类导航 */}
+      <div className="sticky top-[73px] sm:top-[81px] z-20 bg-card border-b shadow-sm">
         <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-4">
           <div className="flex items-center justify-between mb-3 sm:mb-4">
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground">Xinsd 苍蝇饭馆</h1>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">食材管理</span>
+            </div>
             {isSelectionMode ? (
               <div className="flex gap-2">
                 <Button
@@ -207,7 +214,7 @@ export default function Home() {
             ))}
           </nav>
         </div>
-      </header>
+      </div>
 
       {/* 主要内容 */}
       <main className="container mx-auto px-3 sm:px-4 py-3 sm:py-4 md:py-6">
@@ -388,5 +395,13 @@ export default function Home() {
         category={categories.find(c => c.id === categoryToEdit) || categories[0]}
       />
     </div>
+  )
+}
+
+export default function Home() {
+  return (
+    <ProtectedRoute>
+      <HomePage />
+    </ProtectedRoute>
   )
 }

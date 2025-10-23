@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Plus, Check, Edit } from "lucide-react"
 import { useCart } from "@/contexts/cart-context"
-import Image from "next/image"
+import { OptimizedImage } from "./optimized-image"
 import { cn } from "@/lib/utils"
 import { useEffect, useRef, useState } from "react"
 import { EditItemDialog } from "./edit-item-dialog"
@@ -76,16 +76,13 @@ export function MenuItemCard({
         onClick={handleClick}
       >
         <div className="relative aspect-[4/3] overflow-hidden bg-secondary">
-          <Image
-            src={item.image || "/placeholder.svg"}
+          <OptimizedImage
+            src={item.image}
             alt={item.name}
             fill
+            aspectRatio="4/3"
+            imageType="item"
             className="object-cover group-hover:scale-105 transition-transform duration-300"
-            onError={(e) => {
-              // 图片加载失败时使用占位图
-              const target = e.target as HTMLImageElement
-              target.src = "/placeholder.svg"
-            }}
           />
           {isSelectionMode && (
             <div

@@ -10,18 +10,36 @@ export async function initializeOnStartup(): Promise<void> {
   console.log('🚀 应用启动初始化...')
 
   try {
-    // 动态导入图片管理器以避免循环依赖
+    // 1. 初始化数据库默认数据（仅首次启动）
+    const { initializeDefaultData } = await import('./database-sqlite')
+    await initializeDefaultData()
+    
+    // 2. 动态导入图片管理器以避免循环依赖
     const { initializeImageCleanup, imageManager } = await import('./image-manager')
     
     // 初始化图片清理
     await initializeImageCleanup()
     
-    // 设置定时清理任务（每小时清理一次临时图片）
+    // 3. 设置定时清理任务
+    // 每小时清理一次临时图片
     setInterval(async () => {
       try {
         await imageManager.cleanupTempImages(1) // 清理1小时前的临时图片
       } catch (error) {
-        console.error('定时清理失败:', error)
+        console.error('定时清理临时图片失败:', error)
+      }
+    }, 60 * 60 * 1000) // 每小时执行一次
+    
+    // 每小时清理一次过期会话
+    setInterval(async () => {
+      try {
+        const { queries } = await import('./database-sqlite')
+        const cleanedCount = queries.cleanupExpiredSessions()
+        if (cleanedCount > 0) {
+          console.log(`🧹 清理了 ${cleanedCount} 个过期会话`)
+        }
+      } catch (error) {
+        console.error('定时清理过期会话失败:', error)
       }
     }, 60 * 60 * 1000) // 每小时执行一次
 

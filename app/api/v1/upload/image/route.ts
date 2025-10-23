@@ -4,9 +4,15 @@ import { join } from 'path'
 import { createSuccessResponse, createErrorResponse, validateImageFile } from '@/lib/api-types'
 import { createApiResponse } from '@/lib/api-utils-sqlite'
 import { getImagePaths, getImageUrlPaths } from '@/lib/config'
+import { requireAuth, createUnauthorizedResponse } from '@/lib/auth'
 
 // POST /api/v1/upload/image - 上传图片
 export async function POST(request: NextRequest) {
+  // 验证用户认证
+  const user = await requireAuth(request)
+  if (!user) {
+    return createUnauthorizedResponse('请先登录')
+  }
   try {
     const formData = await request.formData()
     const file = formData.get('file') as File
